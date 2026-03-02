@@ -2,98 +2,56 @@ SHL Assessment Recommendation System
 Approach Document
 Author: Mohammad Inayat Hussain
 
-
 Page 1: Problem, Architecture and Data Pipeline
 
-Problem Statement
+Problem
+The goal was to build a system where someone can type what kind of test they need like "I need a coding test for Java" and get the best matching SHL assessments back. The system had to be a real API returning JSON, and it also needed to generate a CSV file predicting answers for a set of test questions.
 
-Given a natural-language job description or a hiring query, recommend the most relevant SHL assessments from the product catalog. The system needs to expose a REST API with both GET and POST endpoints, return results as JSON, and generate a CSV of predictions for batch evaluation.
+How it works
+The way the system finds the right assessments is pretty straightforward. First it takes the user's search query and cleans it up. Then it looks for specific rules in the text, like if the user asked for a test under 30 minutes, or a specific type like a personality test.
 
-Architecture
+After that, the system scores every SHL assessment against the user's search to find the best matches. It scores them based on three things:
 
-The pipeline is simple and sequential:
+First is general meaning. It uses an embedding model called all-MiniLM-L6-v2 to understand what the search means and compares it to all the assessments. This is worth half the score.
 
-User Query -> Sanitize -> Extract Constraints -> Expand with Gemini LLM
--> Embed with Sentence-Transformer -> Hybrid Score -> Filter and Rank -> Top 10
+Second is exact word matches. Sometimes meaning isn't enough. If someone searches for Java, they want a Java test, not a generic coding test. So the system gets extra points for matching exact words.
 
-I split scoring into three parts because no single method worked well enough on its own:
+Third is title matching. If a user searches for something that exactly matches the title of an SHL test, that test gets a big boost to the top of the list.
 
-- Semantic similarity at 50 percent weight. Cosine similarity between the query embedding and precomputed assessment embeddings using all-MiniLM-L6-v2. This handles the broad intent of the query.
+Getting the data
+To get the list of SHL assessments, I wrote a Python script using BeautifulSoup that went through the SHL website. It went to every single product page and pulled out the description, how long the test takes, what kind of test it is, and whether it can be taken remotely. Sometimes the SHL website would give an error, so the script had to wait and try again when that happened.
 
-- Keyword overlap at 25 percent weight. Token intersection between query words and assessment text after removing stop words. This catches exact technology names like Java or SQL that embeddings tend to blur together.
+Once I had all the data, I had to clean it up. I removed duplicate entries, fixed formatting issues so the computer could read it better, and combined all the important information into one big block of text for each assessment so the search engine could understand it. I ended up with 389 unique assessments.
 
-- Assessment name match at 25 percent weight. Direct token overlap with assessment titles. When someone searches for Java 8 the assessment literally named Java 8 New gets a strong boost instead of being buried under generic coding tests.
-
-The system also extracts constraints from the query before scoring:
-- Time limits like under 30 minutes
-- Test types like cognitive or personality or coding
-- Job levels like entry-level or senior or executive
-- Whether adaptive or IRT testing is required
-
-Data Pipeline
-
-Scraping. I built a scraper with requests and BeautifulSoup that paginates through the SHL product catalog filtering for Individual Test Solutions. It visits each detail page to pull descriptions, test types, durations, remote and adaptive support, and job levels. I added retry logic and polite delays because SHL occasionally returns 5xx errors.
-
-Cleaning. The raw scraper output needed work. Test types were space-separated on the site like C P A B so I converted them to comma-separated. Missing durations got set to -1 as a sentinel value. Unicode dashes were breaking name matching so I normalized them. The cleaning script also handles deduplication, URL validation, and builds a combined text column that the embedding model uses.
-
-Final catalog is 389 Individual Test Solutions with structured metadata.
-
-Tech Stack
-
-API: FastAPI plus Uvicorn
-Embeddings: sentence-transformers all-MiniLM-L6-v2 at 384 dimensions
-LLM: Google Gemini 2.0 Flash for query expansion, runs as optional
-Scoring: NumPy plus scikit-learn for cosine similarity
-Frontend: Streamlit
-Scraping: requests plus BeautifulSoup4
-Deployment: Hugging Face Spaces for the API, Streamlit Cloud for the frontend
-
+Tools used
+For the API I used FastAPI. To understand the text I used a sentence transformer model from Hugging Face. The search logic was built with standard Python math libraries like NumPy. I built a quick web interface using Streamlit, and deployed the whole thing on Hugging Face Spaces and Streamlit Cloud.
 
 Page 2: Evaluation, Decisions and Security
 
-Evaluation Journey
+How I tested it
+To see if the system was actually good, I tested it against the 10 example queries SHL provided where we already knew the right answers.
 
-The primary metric is Mean Recall at 10 against the labeled training set which has 10 queries each with 1 to 3 ground truth assessments.
+At first, I just used the embedding model by itself. It was decent, but it missed a lot of specific technical tests. 
 
-Iteration 1: Baseline semantic search only. Mean Recall at 10 was 0.567.
-Iteration 2: Added fuzzy name matching but it was initially broken by unicode issues. Score dropped to 0.450.
-Iteration 3: Fixed name resolution and added a manual override map for the worst mismatches. Score recovered to 0.600.
-Iteration 4: Added synonym expansion, adaptive boost, and name-match scoring. Final score reached 0.683.
+Then I tried adding exact name matching, but some weird characters in the scraped data broke it and made the score worse. Once I fixed the data cleaning, the score jumped up significantly.
 
-The biggest win in the last iteration was injecting domain-specific synonyms before embedding. For example expanding behavioral to OPQ personality questionnaire bridges the vocabulary gap between how people ask questions and how SHL names its products. The adaptive boost and name matching each added smaller but meaningful improvements.
+The biggest breakthrough was adding a step before the search where I map common words to SHL's specific vocabulary. For example, if a user asks for a behavioral test, the system knows to look for the OPQ personality questionnaire. Combining that with the three-part scoring system gave the best results.
 
-Design Decisions
+Why I built it this way
+I chose to combine meaning-based search with exact word matching because neither one works perfectly on its own. Meaning is good for broad searches, but terrible for specific software languages. 
 
-Why hybrid instead of pure semantic search. Pure embedding search missed exact technology names. A query for Java 8 would return general coding tests because the embedding space does not differentiate well between specific tech stacks. Adding keyword overlap and name matching fixed this.
+I decided not to use a big complex vector database like Pinecone because there are only 389 assessments. A simple math array in Python can search through 389 items almost instantly, so a database would just add unnecessary complication.
 
-Why Gemini is optional. The system works without an API key by falling back to raw queries. This means the evaluation pipeline never fails due to LLM quota limits or network issues.
+I also made sure the system works perfectly even if the Gemini AI expansion fails. I didn't want the API to break just because an external service went down.
 
-Why no external vector database. With only 389 assessments a NumPy matrix fits easily in memory and cosine similarity runs in under 50 milliseconds. Adding Pinecone or ChromaDB would be unnecessary complexity for this scale.
+Keeping it safe
+The API is completely public so it had to be secure. Every search query is sanitized to remove any malicious code before the system processes it. 
 
-Security Measures
+I also added protection to make sure users can't trick the API into accessing hidden internal servers, which is a common vulnerability. The API limits how many times someone can search per minute to prevent abuse, and if something does crash, it hides the error details so attackers can't learn anything about the server.
 
-These are implemented and active in the deployed system:
+What could be better
+Right now, if someone pastes a LinkedIn job link, the system just tries to guess keywords from the URL because LinkedIn blocks bots from reading the actual job page. It works okay, but actually reading the job description would be better.
 
-Input sanitization. All queries pass through bleach to strip HTML and script tags, null bytes, and excessive whitespace. Queries are capped at 10000 characters.
+Also, if a user just types one very generic word like "test", the system doesn't have much to go on, so the results aren't as relevant.
 
-SSRF protection. URL inputs are validated against private and internal IP ranges including 127.0.0.1, 169.254.169.254, and the 10.x, 172.16.x, 192.168.x blocks to prevent cloud metadata attacks.
-
-Rate limiting. slowapi enforces 100 requests per minute per IP address.
-
-Error masking. A global exception handler returns generic 500 responses with a trace ID. No stack traces or file paths leak to the client.
-
-Security headers. Every response includes X-Content-Type-Options, X-Frame-Options, Content-Security-Policy, and HSTS headers.
-
-For production the next steps would be adding JWT or OAuth2 authentication, restricting CORS to known frontend domains, and setting up structured audit logging.
-
-Known Limitations
-
-LinkedIn blocks automated requests so pasted LinkedIn URLs fall back to extracting keywords from the URL slug which is less accurate than having the full job description text.
-
-Very short or vague queries like just the word test do not give the engine enough signal. It still returns results but relevance drops noticeably.
-
-Future Work
-
-Fine-tune embeddings on SHL-specific assessment and query pairs to improve domain understanding.
-Add a cross-encoder re-ranking step for higher precision on the final results.
-Build a user feedback loop so recommendations improve over time based on what people actually select.
+In the future, it would be great to actually train the embedding model specifically on SHL's data, instead of using a generic one. That would make the understanding of the specific HR terminology much sharper.
