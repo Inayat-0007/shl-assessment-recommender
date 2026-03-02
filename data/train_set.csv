@@ -1,0 +1,11 @@
+query,relevant_assessments
+"I need a cognitive ability test for entry-level candidates that can be completed in under 30 minutes","Verify Interactive - Numerical Ability,Verify Interactive - Verbal Ability,Verify Interactive - Inductive Reasoning"
+"Looking for a personality assessment for senior managers","OPQ32r,Motivation Questionnaire,Managerial and Professional Profiler"
+"We need a simulation-based test for customer service roles","Contact Center Simulation,Customer Service Simulation"
+"Need a quick coding test for .NET developers","dot NET Framework 4.5,.NET MVC (New),.NET WCF (New)"
+"Looking for leadership assessment tools for executive selection","Leadership Edge 360,Global Skills Development Report,Occupational Personality Questionnaire"
+"We want to test data entry speed and accuracy","Computer Literacy (New),General Clerical Test (New)"
+"Need a behavioral assessment that supports remote testing","OPQ32r,Motivation Questionnaire,CCSQ Managerial Skills Profile"
+"Looking for aptitude tests in multiple languages for global hiring","Verify Interactive - Numerical Ability,Verify Interactive - Verbal Ability"
+"Need a short situational judgement test for sales roles","Sales Representative Solution,Situational Judgement - Supervisory"
+"Want an adaptive/IRT enabled test for graduate recruitment","Verify Interactive - Numerical Ability,Verify Interactive - Deductive Reasoning,Graduate 8.0 Job Focused Assessment"
