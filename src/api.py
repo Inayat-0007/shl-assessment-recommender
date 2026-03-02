@@ -79,7 +79,7 @@ limiter = Limiter(key_func=get_remote_address)
 # This is critical for Render's free tier, which needs to detect the port
 # within ~5 minutes. Model loading can take longer than that.
 
-engine_instance: AssessmentEngine | None = None
+engine_instance = None
 engine_loading = True
 
 
