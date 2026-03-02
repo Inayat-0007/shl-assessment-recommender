@@ -242,7 +242,7 @@ class AssessmentEngine:
             log.info(f"  Loading cached embeddings from {embeddings_cache}")
             self.embeddings = np.load(embeddings_cache)
             log.info(f"  Embeddings shape: {self.embeddings.shape}")
-            # Defer model loading until first query (saves ~3 min on Render)
+            # Defer model loading until first query (saves startup time on cloud deployments)
             self.model = None
             self._model_name = MODEL_NAME
         else:

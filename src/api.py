@@ -50,7 +50,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.utils import sanitize_input
 # NOTE: AssessmentEngine is imported lazily in _load_engine() to avoid
 # blocking the server startup. Importing sentence_transformers + PyTorch
-# takes 3+ minutes on Render's free tier, which prevents port binding.
+# takes several minutes on free tiers, which prevents port binding.
 
 
 # -- Config (all overridable via .env) ----------------------------------------
@@ -76,8 +76,8 @@ limiter = Limiter(key_func=get_remote_address)
 
 # -- Engine lifecycle ----------------------------------------------------------
 # Load engine in a background thread so the API port opens immediately.
-# This is critical for Render's free tier, which needs to detect the port
-# within ~5 minutes. Model loading can take longer than that.
+# This is critical for cloud environments with strict health-check timeouts
+# during startup. Model loading can take longer than the allowed window.
 
 engine_instance = None
 engine_loading = True

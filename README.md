@@ -10,8 +10,6 @@ app_port: 7860
 
 # SHL SmartMatch AI — Assessment Recommendation System
 
-**Author:** Mohammad Inayat Hussain
-
 An intelligent recommendation engine that matches job descriptions to SHL's catalog of 389 Individual Test Solutions. Built with a hybrid approach combining semantic search (sentence-transformers), keyword overlap, assessment name matching, and LLM-powered query expansion (Google Gemini) to maximize Recall@10.
 
 ## Architecture
@@ -38,8 +36,8 @@ User Query / JD URL
 
 ```bash
 # Clone
-git clone https://github.com/YOUR_USERNAME/SHL_SmartMatch_AI.git
-cd SHL_SmartMatch_AI
+git clone https://github.com/Inayat-0007/shl-assessment-recommender.git
+cd shl-assessment-recommender
 
 # Setup
 python -m venv venv
@@ -61,6 +59,18 @@ python main.py
 streamlit run frontend/app.py
 # UI: http://localhost:8501
 ```
+
+## Live Deployment (Hugging Face Spaces + Streamlit Cloud)
+
+The backend API is deployed on **Hugging Face Spaces** (Docker SDK, exposing port `7860`).
+
+```bash
+# Push to Hugging Face
+git remote add hf https://huggingface.co/spaces/Inayat05/shl-assessment-recommender
+git push hf main
+```
+
+The frontend runs on **Streamlit Cloud**, connecting to the backend via the `BACKEND_URL` secret.
 
 ## API Endpoints
 
@@ -106,7 +116,7 @@ GET /recommend?query=Python+SQL+developer
 | Security | slowapi (rate limit), bleach (XSS), SSRF validation |
 | Data | 389 Individual Test Solutions scraped from SHL catalog |
 
-## Security
+## Security Features
 
 - **Rate Limiting**: 100 requests/min/IP via slowapi
 - **Input Sanitization**: HTML/XSS stripping via bleach
@@ -120,16 +130,18 @@ GET /recommend?query=Python+SQL+developer
 
 ```
 SHL_SmartMatch_AI/
-├── main.py                  # Entry point
+├── main.py                  # Entry point (port 8000)
+├── Dockerfile               # Hugging Face deployment config (port 7860)
 ├── requirements.txt         # Dependencies
-├── Procfile                 # Render deployment
 ├── .env.example             # Environment template
 ├── generate_results.py      # Test set prediction generator
+├── test_engine.py           # Engine unit tests
 ├── data/
 │   ├── shl_catalog.csv      # Raw scraped catalog
 │   ├── shl_catalog_clean.csv # Cleaned catalog (389 assessments)
 │   ├── train_set.csv        # 10 labeled queries
-│   └── test_set.csv         # 9 unlabeled test queries
+│   ├── test_set.csv         # 9 unlabeled test queries
+│   └── embeddings.npy       # Pre-computed embeddings for fast boot
 ├── scraper/
 │   ├── scrape_catalog.py    # SHL catalog scraper
 │   └── clean_catalog.py     # Data cleaning pipeline
@@ -137,14 +149,13 @@ SHL_SmartMatch_AI/
 │   ├── engine.py            # Core recommendation engine
 │   ├── api.py               # FastAPI application + security
 │   ├── evaluate.py          # Mean Recall@K evaluation
-│   ├── utils.py             # Security utilities
-│   └── test_engine.py       # Engine unit tests
+│   └── utils.py             # Security utilities
 ├── frontend/
 │   └── app.py               # Streamlit web interface
 ├── results/
 │   └── results.csv          # Test set predictions
 └── docs/
-    └── approach_document.pdf # 2-page approach document
+    └── approach_document.pdf # Approach documentation
 ```
 
 ## Evaluation
