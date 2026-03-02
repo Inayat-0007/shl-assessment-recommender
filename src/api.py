@@ -48,7 +48,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.utils import sanitize_input
-from src.engine import AssessmentEngine
+# NOTE: AssessmentEngine is imported lazily in _load_engine() to avoid
+# blocking the server startup. Importing sentence_transformers + PyTorch
+# takes 3+ minutes on Render's free tier, which prevents port binding.
 
 
 # -- Config (all overridable via .env) ----------------------------------------
@@ -85,10 +87,13 @@ def _load_engine():
     """Background loader for the recommendation engine."""
     global engine_instance, engine_loading
     try:
+        from src.engine import AssessmentEngine  # Lazy import — heavy deps
         engine_instance = AssessmentEngine()
         log.info(f"Engine ready: {len(engine_instance.df)} assessments loaded")
     except Exception as e:
         log.error(f"CRITICAL: Engine failed to load: {e}")
+        import traceback
+        traceback.print_exc()
         engine_instance = None
     finally:
         engine_loading = False
