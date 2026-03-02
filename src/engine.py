@@ -232,16 +232,30 @@ class AssessmentEngine:
         # Ensure duration is integer
         self.df["duration"] = pd.to_numeric(self.df["duration"], errors="coerce").fillna(-1).astype(int)
 
-        # ── Load sentence-transformers model ──
-        log.info(f"  Loading model: {MODEL_NAME}...")
-        self.model = SentenceTransformer(MODEL_NAME)
-        log.info(f"  Model loaded successfully")
-
-        # ── Pre-compute embeddings ──
-        log.info(f"  Computing embeddings for {len(self.df)} assessments...")
         texts = self.df["combined_text"].tolist()
-        self.embeddings = self.model.encode(texts, show_progress_bar=False, convert_to_numpy=True)
-        log.info(f"  Embeddings shape: {self.embeddings.shape}")
+
+        # ── Load or compute embeddings ──
+        embeddings_cache = os.path.join(os.path.dirname(CATALOG_FILE), "embeddings.npy")
+
+        if os.path.exists(embeddings_cache):
+            # Fast path: load pre-computed embeddings (skips model + computation)
+            log.info(f"  Loading cached embeddings from {embeddings_cache}")
+            self.embeddings = np.load(embeddings_cache)
+            log.info(f"  Embeddings shape: {self.embeddings.shape}")
+            # Defer model loading until first query (saves ~3 min on Render)
+            self.model = None
+            self._model_name = MODEL_NAME
+        else:
+            # Slow path: load model and compute embeddings
+            log.info(f"  Loading sentence-transformer model...")
+            self.model = SentenceTransformer(MODEL_NAME)
+            log.info(f"  Model loaded successfully")
+            log.info(f"  Computing embeddings for {len(self.df)} assessments...")
+            self.embeddings = self.model.encode(texts, show_progress_bar=False, convert_to_numpy=True)
+            log.info(f"  Embeddings shape: {self.embeddings.shape}")
+            # Save cache for next time
+            np.save(embeddings_cache, self.embeddings)
+            log.info(f"  Cached embeddings to {embeddings_cache}")
 
         # ── Pre-compute keyword sets for each assessment ──
         self.keyword_sets = [
@@ -763,6 +777,11 @@ class AssessmentEngine:
         Returns:
             1D numpy array of cosine similarity scores (0 to 1).
         """
+        # Lazy-load model on first query (deferred from startup for fast deploy)
+        if self.model is None:
+            log.info(f"  Loading model on first query: {self._model_name}")
+            self.model = SentenceTransformer(self._model_name)
+            log.info(f"  Model loaded successfully")
         query_embedding = self.model.encode([query], convert_to_numpy=True)
         scores = cosine_similarity(query_embedding, self.embeddings)[0]
         # Clip to 0-1 range

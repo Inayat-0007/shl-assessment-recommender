@@ -1,3 +1,13 @@
+---
+title: SHL Assessment Recommender
+emoji: 🎯
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+app_port: 7860
+---
+
 # SHL SmartMatch AI — Assessment Recommendation System
 
 **Author:** Mohammad Inayat Hussain
