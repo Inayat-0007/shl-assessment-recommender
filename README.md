@@ -91,6 +91,43 @@ python main.py
 
 ---
 
+## 📽️ Visualizing the Architecture & Case Study
+
+If you'd like to see a visual breakdown of how the system works, I've recorded a few presentations analyzing the architecture and the case study behind this SmartMatch AI. 
+
+<details>
+<summary><b>🧠 1. Complete Program Mind Map</b> (Click to expand)</summary>
+
+<br>
+
+![SmartMatch AI Mind Map](docs/mindmap.png)
+
+</details>
+
+<details>
+<summary><b>🎥 2. The SmartMatch Case Study Presentation</b> (Click to expand)</summary>
+
+<br>
+
+If you are viewing this on GitHub, the video should play natively below. Otherwise, you can [click here to view/download it](docs/case_study.mp4).
+
+https://github.com/Inayat-0007/shl-assessment-recommender/blob/main/docs/case_study.mp4
+
+</details>
+
+<details>
+<summary><b>🎬 3. Architecture Deep Dive (हिंदी / Hindi)</b> (Click to expand)</summary>
+
+<br>
+
+If you are viewing this on GitHub, the video should play natively below. Otherwise, you can [click here to view/download it](docs/architecture_presentation.mp4).
+
+https://github.com/Inayat-0007/shl-assessment-recommender/blob/main/docs/architecture_presentation.mp4
+
+</details>
+
+---
+
 ## 👋 A Little About Me
 
 Hi, I'm **Mohammad Inayat Hussain**! I am a passionate and results-driven software engineer who loves solving complex architectural challenges. I thrive at the intersection of traditional software engineering and modern AI capabilities. For this assessment, I focused heavily on ensuring the system wasn't just "functional AI," but also a clean, scalable, mathematically sound, and defensive production-grade application.
