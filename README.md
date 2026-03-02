@@ -10,35 +10,63 @@ app_port: 7860
 
 # SHL SmartMatch AI — Assessment Recommendation System
 
-**Author:** Mohammad Inayat Hussain
+An intelligent, hybrid-search recommendation engine built for the SHL GenAI Take-Home Assessment. It accurately matches open-ended job descriptions or URLs to SHL's catalog of 389 Individual Test Solutions without relying on heavy external vector databases.
 
-**Live Links:**
+## 🔗 Important Assessment Links
+
 - 🐙 **GitHub Repository:** [Inayat-0007/shl-assessment-recommender](https://github.com/Inayat-0007/shl-assessment-recommender)
-- 🚀 **Hugging Face API:** [inayat05-shl-assessment-recommender.hf.space](https://inayat05-shl-assessment-recommender.hf.space)
+- 🚀 **Live API Endpoint (Hugging Face):** [inayat05-shl-assessment-recommender.hf.space](https://inayat05-shl-assessment-recommender.hf.space)
+- 💻 **Live Frontend UI (Streamlit):** [https://shl-assessment-recommender-4dmfefreyamknkkhsytfhc.streamlit.app/](https://shl-assessment-recommender-4dmfefreyamknkkhsytfhc.streamlit.app/)
+- 📄 **Approach Document:** [`docs/approach_document.pdf`](https://github.com/Inayat-0007/shl-assessment-recommender/blob/main/docs/approach_document.pdf)
+- 📊 **Predictions CSV:** [`results/results.csv`](https://github.com/Inayat-0007/shl-assessment-recommender/blob/main/results/results.csv)
 
-An intelligent recommendation engine that matches job descriptions to SHL's catalog of 389 Individual Test Solutions. Built with a hybrid approach combining semantic search (sentence-transformers), keyword overlap, assessment name matching, and LLM-powered query expansion (Google Gemini) to maximize Recall@10.
+---
 
-## Architecture
+## 🎯 About the Assessment
 
-```
-User Query / JD URL
-        |
-   [Input Sanitization & Security]
-        |
-   [Gemini LLM Query Expansion]
-        |
-   [Sentence-Transformer Embedding]
-        |
-   [Hybrid Search: Semantic + Keyword + Name Match]
-        |
-   [Constraint Filters: Type, Time, Job Level]
-        |
-   [Multi-Domain Balancing (K + P)]
-        |
-   Top 5-10 Recommendations (JSON)
-```
+The goal of this assessment was to build an intelligent recommendation system capable of navigating SHL's extensive product catalog. The system needed to take a natural language query (e.g., "I need a Java coding test under 30 minutes") or a job board URL and output the top 5 to 10 most relevant assessments.
 
-## Quick Start
+The solution had to strictly adhere to SHL's 16 elimination rules, meaning no heavy orchestrators (like LangChain), no external vector databases (like Pinecone), careful consideration of cloud execution constraints, and robust security measures that still permit automated evaluation bots.
+
+---
+
+## 🧠 The Problem I Faced & How I Implemented It
+
+**The Challenge:**
+The biggest hurdle was the classic "Semantic Search vs. Exact Match" dilemma. Given the strict rule against external vector databases, relying purely on Local/In-memory Vector Embeddings (Sentence Transformers) often resulted in the AI misunderstanding exact technological requirements. For example, a search for "Java" would semantically map to "Coffee" or broad "Software Engineering" concepts, dropping the actual "Java" coding tests in rank.
+
+Furthermore, cloud environments (like Hugging Face free tiers) mandate strict memory limits and fast boot requirements, meaning loading giant language models on startup would cause health-check timeouts and crashes.
+
+**The Implementation:**
+To solve this, I designed a **Lightweight Hybrid Search Engine** powered entirely by fast, in-memory structures (Numpy/Pandas). 
+
+1. **Lazy Loading:** Model weights (`all-MiniLM-L6-v2`) and pre-computed embeddings are loaded asynchronously in a background thread. This allows the API to pass cloud health checks instantly.
+2. **Hybrid Scoring:** Instead of pure semantic search, the engine utilizes a custom mathematical blend: 
+   - *50% Semantic Intent* (vector embeddings for broad understanding)
+   - *25% Keyword Overlap* (for technical precision)
+   - *25% Assessment Name Match* (to strongly boost exact skill matches like "HTML" or "C#")
+3. **Smart LLM Expansion:** I layered Google Gemini 2.0 Flash at the very beginning of the pipeline to infer hidden skills from sparse job descriptions before the hybrid search occurs, dramatically increasing my Recall@10 metrics.
+
+---
+
+## ⚙️ Architecture & Tech Stack
+
+| Component | Technology |
+|-----------|-----------|
+| **Embeddings** | `sentence-transformers/all-MiniLM-L6-v2` |
+| **LLM Inference** | Google Gemini 2.0 Flash (Query Expansion) |
+| **API Framework** | FastAPI + Uvicorn |
+| **Search Engine** | Custom Numpy/Pandas Hybrid Matcher |
+| **Security Layer**| `slowapi` (Rate limit), `bleach` (XSS sanitization) |
+
+### Endpoints (Fully compliant with SHL Rubric)
+- `GET /health` -> Liveness check
+- `POST /recommend` -> JSON body evaluation endpoint
+- `GET /recommend` -> Browser-friendly URL parameter endpoint
+
+---
+
+## 🚀 Quick Start (Local Development)
 
 ```bash
 # Clone
@@ -59,116 +87,12 @@ cp .env.example .env
 # Run Backend API
 python main.py
 # API: http://localhost:8000
-# Docs: http://localhost:8000/docs
-
-# Run Frontend (separate terminal)
-streamlit run frontend/app.py
-# UI: http://localhost:8501
 ```
 
-## Live Deployment (Hugging Face Spaces + Streamlit Cloud)
+---
 
-The backend API is deployed on **Hugging Face Spaces** (Docker SDK, exposing port `7860`).
+## 👋 A Little About Me
 
-```bash
-# Push to Hugging Face
-git remote add hf https://huggingface.co/spaces/Inayat05/shl-assessment-recommender
-git push hf main
-```
+Hi, I'm **Mohammad Inayat Hussain**! I am a passionate and results-driven software engineer who loves solving complex architectural challenges. I thrive at the intersection of traditional software engineering and modern AI capabilities. For this assessment, I focused heavily on ensuring the system wasn't just "functional AI," but also a clean, scalable, mathematically sound, and defensive production-grade application.
 
-The frontend runs on **Streamlit Cloud**, connecting to the backend via the `BACKEND_URL` secret.
-
-## API Endpoints
-
-### Health Check
-```
-GET /health
-Response: {"status": "healthy", "assessments": 389}
-```
-
-### Recommend Assessments
-```
-POST /recommend
-Body: {"query": "Java developer with collaboration skills"}
-
-GET /recommend?query=Python+SQL+developer
-```
-
-### Response Format
-```json
-{
-  "recommended_assessments": [
-    {
-      "url": "https://www.shl.com/products/product-catalog/view/java-8-new/",
-      "adaptive_support": "No",
-      "description": "...",
-      "duration": 20,
-      "remote_support": "Yes",
-      "test_type": ["K"]
-    }
-  ]
-}
-```
-
-## Tech Stack
-
-| Component | Technology |
-|-----------|-----------|
-| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` |
-| LLM | Google Gemini 2.0 Flash (query expansion) |
-| API | FastAPI + Uvicorn |
-| Frontend | Streamlit |
-| Search | Hybrid: Cosine Similarity + Keyword Overlap + Name Match |
-| Security | slowapi (rate limit), bleach (XSS), SSRF validation |
-| Data | 389 Individual Test Solutions scraped from SHL catalog |
-
-## Security Features
-
-- **Rate Limiting**: 100 requests/min/IP via slowapi
-- **Input Sanitization**: HTML/XSS stripping via bleach
-- **SSRF Protection**: Private IP blocking on URL inputs
-- **Security Headers**: X-Content-Type-Options, X-Frame-Options, CSP
-- **Error Masking**: No stack traces or file paths exposed
-- **Request Size Limiting**: 1MB max payload
-- **CORS**: Open for evaluation (production would whitelist)
-
-## Project Structure
-
-```
-SHL_SmartMatch_AI/
-├── main.py                  # Entry point (port 8000)
-├── Dockerfile               # Hugging Face deployment config (port 7860)
-├── requirements.txt         # Dependencies
-├── .env.example             # Environment template
-├── generate_results.py      # Test set prediction generator
-├── test_engine.py           # Engine unit tests
-├── data/
-│   ├── shl_catalog.csv      # Raw scraped catalog
-│   ├── shl_catalog_clean.csv # Cleaned catalog (389 assessments)
-│   ├── train_set.csv        # 10 labeled queries
-│   ├── test_set.csv         # 9 unlabeled test queries
-│   └── embeddings.npy       # Pre-computed embeddings for fast boot
-├── scraper/
-│   ├── scrape_catalog.py    # SHL catalog scraper
-│   └── clean_catalog.py     # Data cleaning pipeline
-├── src/
-│   ├── engine.py            # Core recommendation engine
-│   ├── api.py               # FastAPI application + security
-│   ├── evaluate.py          # Mean Recall@K evaluation
-│   └── utils.py             # Security utilities
-├── frontend/
-│   └── app.py               # Streamlit web interface
-├── results/
-│   └── results.csv          # Test set predictions
-└── docs/
-    └── approach_document.pdf # Approach documentation
-```
-
-## Evaluation
-
-Mean Recall@10 computed against labeled train set (10 queries).
-Results CSV generated on unlabeled test set (9 queries).
-
-## Author
-
-Built by **Mohammad Inayat Hussain** for the SHL GenAI Take-Home Assessment.
+Feel free to explore the code, test the API, and see how the SmartMatch Engine works under the hood!
