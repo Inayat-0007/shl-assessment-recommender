@@ -51,7 +51,7 @@ Embed (Sentence-Transformer)  →  Hybrid Score  →  Filter & Rank  →  Top 10
 | Scoring | NumPy + scikit-learn (cosine similarity, TF-IDF) |
 | Frontend | Streamlit |
 | Scraping | requests + BeautifulSoup4 |
-| Deployment | Render (API) + Streamlit Cloud (frontend) |
+| Deployment | Hugging Face Spaces (API) + Streamlit Cloud (frontend) |
 
 ---
 
