@@ -10,6 +10,12 @@ app_port: 7860
 
 # SHL SmartMatch AI — Assessment Recommendation System
 
+**Author:** Mohammad Inayat Hussain
+
+**Live Links:**
+- 🐙 **GitHub Repository:** [Inayat-0007/shl-assessment-recommender](https://github.com/Inayat-0007/shl-assessment-recommender)
+- 🚀 **Hugging Face API:** [inayat05-shl-assessment-recommender.hf.space](https://inayat05-shl-assessment-recommender.hf.space)
+
 An intelligent recommendation engine that matches job descriptions to SHL's catalog of 389 Individual Test Solutions. Built with a hybrid approach combining semantic search (sentence-transformers), keyword overlap, assessment name matching, and LLM-powered query expansion (Google Gemini) to maximize Recall@10.
 
 ## Architecture
