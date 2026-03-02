@@ -73,22 +73,35 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 # -- Engine lifecycle ----------------------------------------------------------
-# Using FastAPI's lifespan context manager so the engine loads once at startup
-# and stays in memory for all requests. Much better than reloading per-request.
+# Load engine in a background thread so the API port opens immediately.
+# This is critical for Render's free tier, which needs to detect the port
+# within ~5 minutes. Model loading can take longer than that.
 
 engine_instance: AssessmentEngine | None = None
+engine_loading = True
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global engine_instance
-    log.info("Starting SHL SmartMatch AI API...")
+def _load_engine():
+    """Background loader for the recommendation engine."""
+    global engine_instance, engine_loading
     try:
         engine_instance = AssessmentEngine()
         log.info(f"Engine ready: {len(engine_instance.df)} assessments loaded")
     except Exception as e:
         log.error(f"CRITICAL: Engine failed to load: {e}")
         engine_instance = None
+    finally:
+        engine_loading = False
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global engine_loading
+    log.info("Starting SHL SmartMatch AI API...")
+    import threading
+    loader = threading.Thread(target=_load_engine, daemon=True)
+    loader.start()
+    log.info("Engine loading in background — API is accepting requests")
     yield
     log.info("Shutting down API...")
 
@@ -239,6 +252,8 @@ def _get_recommendations(query: str) -> list[dict]:
     with descriptions from the catalog.
     """
     if engine_instance is None:
+        if engine_loading:
+            raise HTTPException(503, "Engine is loading, please retry in 30 seconds")
         raise HTTPException(503, "Service temporarily unavailable - engine not loaded")
 
     clean_query = sanitize_input(query)
@@ -287,9 +302,11 @@ async def root():
 @app.get("/health", tags=["Health"])
 async def health_check():
     """Quick liveness probe. Also reports how many assessments are loaded."""
+    if engine_loading:
+        return {"status": "healthy", "engine": "loading", "assessments": 0}
     return {
         "status": "healthy",
-        "engine": "loaded" if engine_instance else "not_loaded",
+        "engine": "loaded" if engine_instance else "error",
         "assessments": len(engine_instance.df) if engine_instance else 0,
     }
 
