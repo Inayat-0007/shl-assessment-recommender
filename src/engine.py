@@ -480,7 +480,7 @@ class AssessmentEngine:
         and competencies.
 
         Features:
-            - Uses gemini-1.5-flash with temperature=0.3
+            - Uses gemini-2.0-flash with temperature=0.3
             - Caches results to avoid redundant API calls
             - Falls back to original query on ANY failure
             - Input is sanitized before sending to LLM

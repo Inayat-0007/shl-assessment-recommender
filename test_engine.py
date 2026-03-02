@@ -26,7 +26,7 @@ if sys.platform == "win32":
         pass
 
 # Add project root to path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from src.engine import AssessmentEngine
 from src.utils import sanitize_input, validate_url, mask_sensitive, is_url
